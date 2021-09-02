@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+
+<title> Ehypo </title>
+
+
+<head>
+<style>
+
+
+body{
+background-color:white;
+}
+
+#itemList{
+    position: absolute;
+    top: -15%;
+    right: 3%;
+    text-shadow: 0 0 3px whitesmoke,  0 0 2px whitesmoke, -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+}
+
+#logBox{
+    resize: none;
+    background-color: white;
+}
+
+
+.health{
+    height: 20px;
+    
+}
+
+
+.health.bar{
+    background-color: lightcoral;
+
+    
+}
+
+
+.health.border{
+    background-color: gray;
+}
+
+
+.energy{
+    height: 20px;
+}
+
+
+.energy.bar{
+    background-color: lightgreen;
+
+    
+}
+
+
+.energy.border{
+    background-color: gray;
+}
+
+
+#container {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    float: left;
+    bottom: 0;
+    right: 0;
+    left: 0;
+
+}
+
+
+
+
+</style>
+</head>
+
+
+</body>
+<body>
+
+<div>
+    Local Actions:
+    <button onclick="doAction(CHOP_TREE)" id="chopTreeButton">Chop a Tree</button>
+    <br>
+    <br>
+</div>
+
+
+
+
+<div">
+    Travel: 
+
+    <button onclick="doAction(GO_TO_PLAINS)" id="goToPlains">Go To Plains</button>
+
+    <button onclick="doAction(GO_TO_FOREST)" id="goToForest">Go To Forest</button>
+    
+    <button onclick="doAction(GO_TO_CAVE)" id="goToCave">Go To Cave</button>
+
+    <br>
+    <br>
+
+</div>
+
+<div>
+    Global Actions:
+    <button onclick="doAction(REST)" id="restButton">Rest</button>
+
+</div>
+
+
+
+
+
+
+
+<div id="container">
+
+
+    <ul id= "itemList"></ul>
+
+
+    <div style="display: grid; grid-template-columns: 70% 30%;">
+
+        <div style="display: flex; flex-direction: column; justify-content: flex-end;"> 
+
+
+            <div style="display: grid; grid-template-columns: 50% 50%;">
+
+                <div class="health border"><div id="healthText" style="position: absolute; margin-left: 6px;">Health: 100</div><div class="health bar" id ="healthBar"></div></div>
+                <div class="energy border"><div id="energyText" style="position: absolute; margin-left: 6px;">Energy: 100</div><div class="energy bar" id ="energyBar"></div></div>
+
+            </div>
+
+
+            
+        </div>
+        
+
+        <textarea id="logBox" readonly = true cols="40" rows="19"></textarea>
+
+        
+
+    </div>
+
+
+</div>
+
+    
+</body>
+
+
+
+
+
+
+
+<script>
+var energyBar = document.getElementById("energyBar");
+var logBox = document.getElementById("logBox");
+var itemList = document.getElementById("itemList");
+var healthText = document.getElementById("healthText");
+var energyText = document.getElementById("energyText");
+var energyBar = document.getElementById("energyBar");
+
+
+//Stats
+const HEALTH = 1
+const ENERGY = 2
+
+
+//Actions
+const REST = 0;
+const GO_TO_PLAINS = 1;
+const GO_TO_FOREST = 2;
+const GO_TO_CAVE = 3;
+const CHOP_TREE = 4;
+
+
+//Locations
+const PLAINS = 0;
+const FOREST = 1;
+const CAVE = 2;
+
+const ANY_LOCATION = [PLAINS, FOREST, CAVE];
+
+
+//Items
+const WOOD = 1;
+
+//Data
+
+
+var playerStats = []
+playerStats[HEALTH] = 100
+playerStats[ENERGY] = 100
+
+
+const actionButtons = []
+actionButtons[REST] = document.getElementById("restButton");
+actionButtons[GO_TO_PLAINS] = document.getElementById("goToPlains");
+actionButtons[GO_TO_FOREST] = document.getElementById("goToForest");
+actionButtons[GO_TO_CAVE] = document.getElementById("goToCave");
+actionButtons[CHOP_TREE] = document.getElementById("chopTreeButton");
+
+
+const actionEnergy = []
+actionEnergy[REST] = 10
+actionEnergy[GO_TO_PLAINS] = -10
+actionEnergy[GO_TO_FOREST] = -10
+actionEnergy[GO_TO_CAVE] = -10
+actionEnergy[CHOP_TREE] = -10
+
+
+
+const actionLocations = []
+actionLocations[REST] = ANY_LOCATION
+actionLocations[GO_TO_PLAINS] = [FOREST]
+actionLocations[GO_TO_FOREST] = [PLAINS, CAVE]
+actionLocations[GO_TO_CAVE] = [FOREST]
+actionLocations[CHOP_TREE] = [FOREST]
+
+
+
+const actionGoToLocation = []
+actionGoToLocation[REST] = null
+actionGoToLocation[GO_TO_PLAINS] = PLAINS
+actionGoToLocation[GO_TO_FOREST] = FOREST
+actionGoToLocation[GO_TO_CAVE] = CAVE
+actionGoToLocation[CHOP_TREE] = null
+
+
+
+const actionLogs = []
+actionLogs[REST] = "You have rested"
+actionLogs[GO_TO_PLAINS] = "You went to plains"
+actionLogs[GO_TO_FOREST] = "You went to forest"
+actionLogs[GO_TO_CAVE] = "You went to cave"
+actionLogs[CHOP_TREE] = "You have chopped a tree"
+
+
+const actionItems = []
+actionItems[REST] = []
+actionItems[GO_TO_PLAINS] = []
+actionItems[GO_TO_FOREST] = []
+actionItems[GO_TO_CAVE] = []
+actionItems[CHOP_TREE] = [ [WOOD, 1] ]
+
+
+
+const itemNames = []
+itemNames[WOOD] = "wood";
+
+
+
+
+
+var currentLocation = PLAINS;
+
+var inventory = []
+inventory[WOOD] = 0;
+
+
+
+
+//on load
+updateButtons();
+
+
+
+
+function doAction(action){
+
+    if (actionGoToLocation[action] != null){
+        currentLocation = actionGoToLocation[action];
+    }
+    
+    for(let itemIndex in actionItems[action]){
+        var item = actionItems[action][itemIndex][0];
+        var count = actionItems[action][itemIndex][1];
+
+        if (item > 0){
+            inventory[item] += count
+            continue;
+        }
+
+        inventory[item] -= count
+        
+    }
+
+    updateInventory();
+
+    addEnergy(actionEnergy[action]);
+    log(actionLogs[action]);
+    updateButtons();
+}
+
+
+
+function updateInventory(){
+    
+    // removes all items (visually)
+    itemList.textContent = '';
+
+    for(let item in inventory){
+
+        if (inventory[item] > 0){
+            var itemDiv = document.createElement("div");
+            var itemElement = document.createElement("li");
+            var dropButton = document.createElement("button");
+            itemDiv.style.display = "flex";
+            dropButton.innerHTML = "Drop"
+            dropButton.style.marginLeft = "5px";
+            dropButton.onclick = function(){ dropItem(item, 1);};
+
+
+            itemElement.innerHTML = itemNames[item];
+
+            if (inventory[item] > 1){
+                itemElement.innerHTML = itemNames[item] + " x" + inventory[item];
+
+            }
+            itemDiv.append(itemElement);
+            itemDiv.append(dropButton);
+            itemList.appendChild(itemDiv);
+        }
+        
+    }
+
+}
+
+
+function dropItem(item, amount){
+    inventory[item] -= amount;
+    log("You have dropped " + amount + " " + itemNames[item]);
+    updateInventory();
+}
+
+
+
+function addEnergy(energy){
+    playerStats[ENERGY] += energy;
+    playerStats[ENERGY] = Math.min(100, playerStats[ENERGY]);
+    updateEnergy();
+}
+
+
+
+function updateEnergy(){
+        energyBar.style.width = playerStats[ENERGY] + "%";
+        energyText.innerHTML = "Energy: " + playerStats[ENERGY];
+    }
+
+
+
+function log(message){
+    logBox.textContent += message + "\n";
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+
+
+
+function updateButtons(){
+
+
+    for(let action in actionButtons){
+
+        actionButtons[action].style.display = "inline";
+
+        if (actionEnergy[action] + playerStats[ENERGY] > 100 || actionEnergy[action] + playerStats[ENERGY] < 0){
+            
+            actionButtons[action].style.display = "none";
+            continue;
+        }
+        
+        if (!actionLocations[action].includes(currentLocation)){
+            actionButtons[action].style.display = "none";
+            continue;
+        }
+
+
+        for(let itemIndex in actionItems[action]){
+            var item = actionItems[action][itemIndex][0];
+            var count = actionItems[action][itemIndex][1];
+
+            if (item < 0){
+                if ((inventory[item] - count) < 0){
+                actionButtons[action].style.display = "none";
+                continue;
+                }
+
+            }
+
+
+        }
+
+    }
+
+
+}
+
+
+
+
+
+</script>
+
+
+
+
+</html>
